@@ -1,0 +1,1240 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Console</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d10;
+      --panel: #11151b;
+      --panel-2: #0f1318;
+      --line: #232a33;
+      --line-2: #1a2028;
+      --text: #e8edf4;
+      --muted: #8b97a8;
+      --soft: #b8c2cf;
+      --blue: #2f74ff;
+      --blue-2: #215be7;
+      --green: #31a36a;
+      --amber: #c18c1b;
+      --red: #d96a6a;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    button, input, textarea, select {
+      font: inherit;
+    }
+    button {
+      cursor: pointer;
+    }
+    .shell {
+      width: min(1240px, calc(100vw - 24px));
+      margin: 0 auto;
+      padding: 16px 0 28px;
+    }
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .title {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+    .lede {
+      margin: 8px 0 0;
+      max-width: 72ch;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .userbox {
+      min-width: 220px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .userline {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      min-width: 0;
+    }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #17202d, #0d1116);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      color: var(--soft);
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .usermeta {
+      min-width: 0;
+    }
+    .usermeta strong,
+    .usermeta small {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .usermeta small {
+      color: var(--muted);
+      margin-top: 2px;
+      font-size: 12px;
+    }
+    .status {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .chip,
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--soft);
+      font-size: 12px;
+      line-height: 1;
+    }
+    .chip strong,
+    .pill strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      min-height: 84px;
+    }
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .metric strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+    .metric small {
+      display: block;
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      padding: 8px 0;
+      background: linear-gradient(180deg, rgba(11,13,16,0.98), rgba(11,13,16,0.88));
+      backdrop-filter: blur(12px);
+    }
+    .tab {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--soft);
+      border-radius: 999px;
+      padding: 9px 12px;
+      min-height: 36px;
+      font-size: 13px;
+      letter-spacing: 0;
+    }
+    .tab.active {
+      color: #fff;
+      border-color: rgba(47, 116, 255, 0.55);
+      background: linear-gradient(180deg, rgba(47, 116, 255, 0.24), rgba(33, 91, 231, 0.18));
+    }
+    .banner {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .banner strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .banner p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .banner .right {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .content {
+      display: grid;
+      gap: 12px;
+    }
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .section-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .section-head h2 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+    .section-head p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      max-width: 68ch;
+    }
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+    .grid.cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .grid.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .cards {
+      display: grid;
+      gap: 10px;
+    }
+    .cards.cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .cards.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .card {
+      background: var(--panel-2);
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+    }
+    .card.active {
+      border-color: rgba(47, 116, 255, 0.6);
+      box-shadow: 0 0 0 1px rgba(47, 116, 255, 0.12) inset;
+    }
+    .card h3 {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .card .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .card .row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .card .price {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .card .sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .list {
+      display: grid;
+      gap: 8px;
+    }
+    .list-item {
+      display: grid;
+      gap: 6px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line-2);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .list-item .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+    .list-item strong {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .list-item small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .fields {
+      display: grid;
+      gap: 10px;
+    }
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .field input,
+    .field textarea,
+    .field select {
+      width: 100%;
+      min-height: 40px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #0d1116;
+      color: var(--text);
+      outline: none;
+    }
+    .field textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    .form-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      min-height: 40px;
+      font-size: 13px;
+    }
+    .button.primary {
+      border-color: rgba(47, 116, 255, 0.6);
+      background: linear-gradient(180deg, var(--blue), var(--blue-2));
+      color: #fff;
+    }
+    .button.ghost {
+      background: transparent;
+    }
+    .button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .muted {
+      color: var(--muted);
+    }
+    .events {
+      display: grid;
+      gap: 8px;
+    }
+    .event {
+      display: grid;
+      gap: 4px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line-2);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .event .head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+    .event strong {
+      font-size: 13px;
+    }
+    .event small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      background: rgba(255, 255, 255, 0.015);
+    }
+    .footer {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .error {
+      border-color: rgba(217, 106, 106, 0.5);
+      color: #ffd6d6;
+      background: rgba(217, 106, 106, 0.08);
+    }
+    @media (max-width: 980px) {
+      .metrics,
+      .grid.cols-2,
+      .grid.cols-3,
+      .cards.cols-2,
+      .cards.cols-3 {
+        grid-template-columns: 1fr 1fr;
+      }
+      .topbar {
+        flex-direction: column;
+      }
+      .userbox {
+        width: 100%;
+      }
+    }
+    @media (max-width: 700px) {
+      .shell {
+        width: min(100vw - 16px, 1240px);
+        padding-top: 12px;
+      }
+      .metrics,
+      .grid.cols-2,
+      .grid.cols-3,
+      .cards.cols-2,
+      .cards.cols-3 {
+        grid-template-columns: 1fr;
+      }
+      .section-head,
+      .banner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .tabs {
+        gap: 6px;
+      }
+      .tab {
+        flex: 1 1 auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">Telegram miniapp / SQLite console</div>
+        <h1 class="title">AI Console</h1>
+        <p class="lede">Заявки, каталог, нейросети, цены, кейсы и профиль собраны в одном рабочем кабинете. Данные пишутся в одну базу.</p>
+      </div>
+      <aside class="userbox">
+        <div class="userline">
+          <div class="avatar" id="avatar">AI</div>
+          <div class="usermeta">
+            <strong id="userName">Загрузка...</strong>
+            <small id="userTag">Telegram ID</small>
+          </div>
+        </div>
+        <div class="status">
+          <span class="pill"><strong>DB</strong> SQLite</span>
+          <span class="pill"><strong>Scope</strong> private</span>
+        </div>
+      </aside>
+    </header>
+
+    <section class="metrics" id="metrics"></section>
+
+    <nav class="tabs" id="tabs"></nav>
+
+    <section class="banner" id="banner">
+      <div>
+        <strong id="bannerTitle">Загрузка данных</strong>
+        <p id="bannerText">Подтягиваем профиль, заявки и каталог.</p>
+      </div>
+      <div class="right" id="bannerBadges"></div>
+    </section>
+
+    <section class="content" id="content"></section>
+
+    <p class="footer">Все данные привязаны к Telegram ID и сохраняются в локальной базе. Miniapp остается основным рабочим интерфейсом, бот только заводит в него и принимает заявки.</p>
+  </main>
+
+  <script type="module">
+    const tg = window.Telegram?.WebApp;
+    tg?.ready();
+    tg?.expand();
+    tg?.setHeaderColor?.("#0b0d10");
+    tg?.setBackgroundColor?.("#0b0d10");
+
+    const params = new URLSearchParams(window.location.search);
+    const fallbackUserId = Number(params.get("userId") || 137);
+    const telegramUser = tg?.initDataUnsafe?.user;
+    const state = {
+      userId: telegramUser?.id || fallbackUserId || 137,
+      activeTab: normalizeTab(params.get("tab") || ""),
+      bootstrap: null,
+      busy: false,
+      error: ""
+    };
+
+    const tabs = [
+      { id: "catalog", label: "Каталог" },
+      { id: "models", label: "Нейросети" },
+      { id: "prices", label: "Цены" },
+      { id: "cases", label: "Кейсы" },
+      { id: "requests", label: "Заявки" },
+      { id: "profile", label: "Профиль" }
+    ];
+
+    const fmtCurrency = new Intl.NumberFormat("ru-RU", {
+      style: "currency",
+      currency: "RUB",
+      maximumFractionDigits: 0
+    });
+    const fmtNumber = new Intl.NumberFormat("ru-RU");
+    const fmtDate = new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeStyle: "short" });
+
+    function normalizeTab(value) {
+      return tabs.some((tab) => tab.id === value) ? value : "catalog";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function initials(name) {
+      const parts = String(name || "AI").trim().split(/\s+/).filter(Boolean);
+      return (parts[0]?.[0] || "A") + (parts[1]?.[0] || "I");
+    }
+
+    function updateUrlTab(tab) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      window.history.replaceState({}, "", url);
+    }
+
+    function getProfile() {
+      return state.bootstrap?.profile || {};
+    }
+
+    function getCatalog() {
+      return state.bootstrap?.catalog || {};
+    }
+
+    async function requestJson(url, options = {}) {
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        },
+        ...options
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}`);
+      }
+      return response.status === 204 ? null : response.json();
+    }
+
+    async function loadBootstrap() {
+      state.busy = true;
+      renderShell();
+      try {
+        const url = new URL("/api/bootstrap", window.location.origin);
+        url.searchParams.set("userId", state.userId);
+        state.bootstrap = await requestJson(url);
+        state.error = "";
+        const preferred = normalizeTab(state.bootstrap?.profile?.preferredTab || state.activeTab);
+        state.activeTab = preferred;
+        updateUrlTab(preferred);
+        await postEvent("tab_view", preferred, { source: "bootstrap" });
+      } catch (error) {
+        state.error = error.message || "Не удалось загрузить данные";
+      } finally {
+        state.busy = false;
+        renderShell();
+      }
+    }
+
+    async function savePreferredTab(tab) {
+      try {
+        await requestJson(`/api/profile?userId=${state.userId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ preferredTab: tab })
+        });
+      } catch (error) {
+        state.error = error.message || "Не удалось сохранить вкладку";
+      }
+    }
+
+    async function postEvent(type, value, meta = {}) {
+      try {
+        await requestJson(`/api/events?userId=${state.userId}`, {
+          method: "POST",
+          body: JSON.stringify({ type, value, meta })
+        });
+      } catch (error) {
+        state.error = error.message || "Не удалось записать событие";
+      }
+    }
+
+    async function setActiveTab(tab) {
+      const next = normalizeTab(tab);
+      state.activeTab = next;
+      updateUrlTab(next);
+      renderShell();
+      await savePreferredTab(next);
+      await postEvent("tab_view", next, { source: "miniapp" });
+    }
+
+    async function selectModel(providerId) {
+      try {
+        await requestJson(`/api/profile?userId=${state.userId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ selectedProviderId: providerId, preferredTab: "models" })
+        });
+        await postEvent("model_selected", providerId, {});
+        await loadBootstrap();
+      } catch (error) {
+        state.error = error.message || "Не удалось сохранить модель";
+        renderShell();
+      }
+    }
+
+    async function saveRequest(form) {
+      const payload = {
+        title: form.title.value.trim(),
+        text: form.text.value.trim(),
+        category: form.category.value,
+        modelId: form.modelId.value,
+        source: "miniapp"
+      };
+      const created = await requestJson(`/api/requests?userId=${state.userId}`, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      form.reset();
+      await postEvent("request_created", created?.request?.title || payload.title, { category: payload.category });
+      await loadBootstrap();
+      await setActiveTab("requests");
+    }
+
+    async function saveProfile(form) {
+      const payload = {
+        company: form.company.value.trim(),
+        role: form.role.value.trim(),
+        about: form.about.value.trim(),
+        selectedProviderId: form.selectedProviderId.value,
+        preferredTab: "profile"
+      };
+      await requestJson(`/api/profile?userId=${state.userId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload)
+      });
+      await postEvent("profile_saved", payload.selectedProviderId || "profile", payload);
+      await loadBootstrap();
+      await setActiveTab("profile");
+    }
+
+    function renderShell() {
+      renderUserBox();
+      renderMetrics();
+      renderTabs();
+      renderBanner();
+      renderContent();
+      if (state.error) {
+        document.getElementById("banner").classList.add("error");
+        document.getElementById("bannerTitle").textContent = "Ошибка";
+        document.getElementById("bannerText").textContent = state.error;
+      } else {
+        document.getElementById("banner").classList.remove("error");
+      }
+    }
+
+    function renderUserBox() {
+      const profile = getProfile();
+      const name = profile.displayName || telegramUser?.first_name || "Пользователь";
+      document.getElementById("userName").textContent = name;
+      document.getElementById("userTag").textContent = profile.username ? `@${profile.username}` : `Telegram ID ${state.userId}`;
+
+      const avatar = document.getElementById("avatar");
+      if (profile.photoUrl) {
+        avatar.innerHTML = `<img src="${escapeHtml(profile.photoUrl)}" alt="">`;
+      } else {
+        avatar.textContent = initials(name);
+      }
+    }
+
+    function renderMetrics() {
+      const stats = state.bootstrap?.stats || {};
+      const items = [
+        ["Заявки", fmtNumber.format(stats.requestsCount || 0), "сохранено в SQLite"],
+        ["Открытия", fmtNumber.format(stats.opensCount || 0), "miniapp и бот"],
+        ["ROI", `${Number(stats.roi || 0).toFixed(1)}x`, "расчетный"],
+        ["Экономия", fmtCurrency.format(stats.estimatedSavingsRub || 0), "оценка эффекта"]
+      ];
+      document.getElementById("metrics").innerHTML = items.map(([label, value, note]) => `
+        <article class="metric">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <small>${escapeHtml(note)}</small>
+        </article>
+      `).join("");
+    }
+
+    function renderTabs() {
+      const active = state.activeTab;
+      document.getElementById("tabs").innerHTML = tabs.map((tab) => `
+        <button class="tab ${tab.id === active ? "active" : ""}" data-tab="${tab.id}" type="button">${escapeHtml(tab.label)}</button>
+      `).join("");
+      document.getElementById("tabs").querySelectorAll("[data-tab]").forEach((button) => {
+        button.addEventListener("click", () => setActiveTab(button.dataset.tab));
+      });
+    }
+
+    function renderBanner() {
+      const profile = getProfile();
+      const stats = state.bootstrap?.stats || {};
+      const badges = [
+        `<span class="chip"><strong>ID</strong> ${escapeHtml(state.userId)}</span>`,
+        `<span class="chip"><strong>Профиль</strong> ${escapeHtml(profile.selectedProviderLabel || "не выбран")}</span>`,
+        `<span class="chip"><strong>Сессия</strong> ${escapeHtml(fmtNumber.format(stats.testsRun || 0))}</span>`
+      ];
+      document.getElementById("bannerTitle").textContent = state.busy ? "Загрузка..." : tabTitle(state.activeTab);
+      document.getElementById("bannerText").textContent = bannerText(state.activeTab);
+      document.getElementById("bannerBadges").innerHTML = badges.join("");
+    }
+
+    function tabTitle(tab) {
+      return tabs.find((item) => item.id === tab)?.label || "Каталог";
+    }
+
+    function bannerText(tab) {
+      const copy = {
+        catalog: "Каталог решений, сценарии и наборы промптов.",
+        models: "Список нейросетей, выбранная основная модель и ее использование.",
+        prices: "Сводка по пакетам и ценам без лишней маркетинговой подачи.",
+        cases: "Примеры рабочих сценариев и измеримый результат.",
+        requests: "История заявок, форма создания и статусы.",
+        profile: "Telegram-профиль, рабочие параметры и история действий."
+      };
+      return copy[tab] || copy.catalog;
+    }
+
+    function renderContent() {
+      const catalog = getCatalog();
+      const profile = getProfile();
+      const stats = state.bootstrap?.stats || {};
+      const requests = state.bootstrap?.requests || [];
+      const events = state.bootstrap?.events || [];
+
+      const html = {
+        catalog: renderCatalogTab(catalog),
+        models: renderModelsTab(catalog, stats, profile),
+        prices: renderPricesTab(catalog),
+        cases: renderCasesTab(catalog),
+        requests: renderRequestsTab(requests, catalog, profile),
+        profile: renderProfileTab(profile, events, catalog, stats)
+      };
+
+      document.getElementById("content").innerHTML = html[state.activeTab] || html.catalog;
+      attachTabActions();
+    }
+
+    function renderCatalogTab(catalog) {
+      const dimensions = [
+        ["Отрасли", catalog.industries || []],
+        ["Задачи", catalog.tasks || []],
+        ["Каналы", catalog.channels || []],
+        ["Типы данных", catalog.dataTypes || []],
+        ["Бюджеты", catalog.budgets || []],
+        ["Навыки", catalog.skills || []],
+        ["Регионы", catalog.regions || []]
+      ];
+
+      return `
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <h2>Каталог</h2>
+              <p>База сценариев, ключевых параметров и решений. Это не лендинг, а рабочая навигация по продукту.</p>
+            </div>
+            <span class="pill"><strong>${escapeHtml((catalog.solutions || []).length)}</strong> решений</span>
+          </div>
+          <div class="grid cols-2">
+            ${dimensions.map(([label, items]) => `
+              <div class="card">
+                <div class="row">
+                  <div>
+                    <h3>${escapeHtml(label)}</h3>
+                    <p>${escapeHtml(items.map((item) => item.title).join(" · "))}</p>
+                  </div>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <h2>Решения</h2>
+              <p>Карточки с логикой выбора, бюджетом и оговорками. В основе лежит один каталог, без дублирования.</p>
+            </div>
+          </div>
+          <div class="cards cols-2">
+            ${(catalog.solutions || []).map((item) => `
+              <article class="card">
+                <div class="row">
+                  <div>
+                    <h3>${escapeHtml(item.title)}</h3>
+                    <div class="sub">${escapeHtml((item.providers || []).join(" · "))}</div>
+                  </div>
+                  <div class="price">${fmtCurrency.format(item.monthlyRub || 0)}</div>
+                </div>
+                <div class="chip-row">
+                  ${(item.bestFor || []).map((entry) => `<span class="chip">${escapeHtml(entry)}</span>`).join("")}
+                </div>
+                <p>${escapeHtml(item.whyFirst || item.summary || "")}</p>
+                <p>${escapeHtml(item.tradeoffs || "")}</p>
+                <div class="meta">
+                  <span class="pill"><strong>Срок</strong> ${escapeHtml(item.effort || "")}</span>
+                </div>
+              </article>
+            `).join("")}
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <h2>Промпт-пакеты</h2>
+              <p>Короткие рабочие шаблоны для разных задач.</p>
+            </div>
+          </div>
+          <div class="cards cols-3">
+            ${(catalog.promptPacks || []).map((pack) => `
+              <article class="card">
+                <h3>${escapeHtml(pack.title)}</h3>
+                <p>${escapeHtml(pack.useCase)}</p>
+                <p class="note">${escapeHtml(pack.prompt)}</p>
+              </article>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderModelsTab(catalog, stats, profile) {
+      const providers = catalog.providers || [];
+      const usage = stats.modelsUsed || [];
+      const usageMap = new Map(usage.map((item) => [item.id, item]));
+      return `
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <h2>Нейросети</h2>
+              <p>Выбор модели хранится в профиле и используется для заявок и основной конфигурации.</p>
+            </div>
+            <span class="pill"><strong>${escapeHtml(profile.selectedProviderLabel || "не выбран")}</strong></span>
+          </div>
+          <div class="cards cols-2">
+            ${providers.map((provider) => {
+              const stat = usageMap.get(provider.id) || {};
+              const active = profile.selectedProviderId === provider.id;
+              return `
+                <article class="card ${active ? "active" : ""}">
+                  <div class="row">
+                    <div>
+                      <h3>${escapeHtml(provider.title)}</h3>
+                      <div class="sub">${escapeHtml(provider.model)}</div>
+                    </div>
+                    <span class="pill"><strong>#${escapeHtml(provider.priority)}</strong> ${escapeHtml(provider.type)}</span>
+                  </div>
+                  <div class="chips">
+                    <span class="chip"><strong>Исп.</strong> ${escapeHtml(fmtNumber.format(stat.usage || 0))}</span>
+                    <span class="chip"><strong>Токены</strong> ${escapeHtml(fmtNumber.format(stat.tokens || 0))}</span>
+                    <span class="chip"><strong>₽</strong> ${escapeHtml(fmtCurrency.format(stat.costRub || 0))}</span>
+                  </div>
+                  <div class="form-actions">
+                    <button class="button ${active ? "primary" : ""}" type="button" data-select-model="${escapeHtml(provider.id)}">
+                      ${active ? "Выбрана" : "Сделать основной"}
+                    </button>
+                  </div>
+                </article>
+              `;
+            }).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPricesTab(catalog) {
+      const items = catalog.pricing || [];
+      return `
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <h2>Цены</h2>
+              <p>Пакеты собраны в плотную таблицу без сайта и без рекламной ленты.</p>
+            </div>
+            <span class="pill"><strong>${escapeHtml(items.length)}</strong> пакетов</span>
+          </div>
+          <div class="cards cols-2">
+            ${items.map((item) => `
+              <article class="card">
+                <div class="row">
+                  <div>
+                    <h3>${escapeHtml(item.title)}</h3>
+                    <div class="sub">${escapeHtml((item.providers || []).join(" · "))}</div>
+                  </div>
+                  <div class="price">${fmtCurrency.format(item.monthlyRub || 0)}</div>
+                </div>
+                <div class="chip-row">
+                  ${(item.bestFor || []).map((entry) => `<span class="chip">${escapeHtml(entry)}</span>`).join("")}
+                </div>
+                <p>${escapeHtml(item.summary || "")}</p>
+                <p>${escapeHtml(item.tradeoffs || "")}</p>
+                <div class="meta">
+                  <span class="pill"><strong>Срок</strong> ${escapeHtml(item.effort || "")}</span>
+                </div>
+              </article>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCasesTab(catalog) {
+      const items = catalog.cases || [];
+      return `
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <h2>Кейсы</h2>
+              <p>Примеры работы и бизнес-сценарии вместо песочницы.</p>
+            </div>
+            <span class="pill"><strong>${escapeHtml(items.length)}</strong> кейсов</span>
+          </div>
+          <div class="cards cols-2">
+            ${items.map((item) => `
+              <article class="card">
+                <div class="row">
+                  <div>
+                    <h3>${escapeHtml(item.title)}</h3>
+                    <div class="sub">${escapeHtml(item.theme || "")}</div>
+                  </div>
+                  <span class="pill">${escapeHtml(item.model || "")}</span>
+                </div>
+                <p>${escapeHtml(item.summary || "")}</p>
+                <p>${escapeHtml(item.result || "")}</p>
+              </article>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRequestsTab(requests, catalog, profile) {
+      const providers = catalog.providers || [];
+      const tasks = catalog.tasks || [];
+      const models = providers.length ? providers : [{ id: "", title: "Без модели" }];
+      return `
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <h2>Заявки</h2>
+              <p>Новые обращения создаются здесь и попадают в ту же SQLite-базу, что и заявки из Telegram.</p>
+            </div>
+            <span class="pill"><strong>${escapeHtml(fmtNumber.format(requests.length))}</strong> в истории</span>
+          </div>
+          <form class="fields" id="requestForm">
+            <div class="grid cols-2">
+              <div class="field">
+                <label>Заголовок</label>
+                <input name="title" placeholder="Например, AI для обработки заявок" required>
+              </div>
+              <div class="field">
+                <label>Категория</label>
+                <select name="category">
+                  ${tasks.map((task) => `<option value="${escapeHtml(task.id)}">${escapeHtml(task.title)}</option>`).join("")}
+                </select>
+              </div>
+            </div>
+            <div class="grid cols-2">
+              <div class="field">
+                <label>Текст заявки</label>
+                <textarea name="text" placeholder="Кратко опишите задачу, ограничения и желаемый результат" required></textarea>
+              </div>
+              <div class="field">
+                <label>Модель</label>
+                <select name="modelId">
+                  <option value="">Не выбрана</option>
+                  ${models.map((provider) => `
+                    <option value="${escapeHtml(provider.id)}" ${profile.selectedProviderId === provider.id ? "selected" : ""}>
+                      ${escapeHtml(provider.title)}
+                    </option>
+                  `).join("")}
+                </select>
+                <div class="note">Если модель не указана, берется основная из профиля.</div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="button primary" type="submit">Сохранить заявку</button>
+              <span class="note">После сохранения запись появится в истории и в Telegram-боте.</span>
+            </div>
+          </form>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <h2>История</h2>
+              <p>Сохраненные заявки с источником и статусом.</p>
+            </div>
+          </div>
+          ${requests.length ? `
+            <div class="events">
+              ${requests.map((item) => `
+                <article class="event">
+                  <div class="head">
+                    <strong>${escapeHtml(item.title)}</strong>
+                    <span class="pill"><strong>${escapeHtml(item.status)}</strong></span>
+                  </div>
+                  <small>${escapeHtml(item.text)}</small>
+                  <small>${escapeHtml(item.source)} · ${escapeHtml(item.category)} · ${escapeHtml(fmtDate.format(new Date(item.createdAt)))}</small>
+                </article>
+              `).join("")}
+            </div>
+          ` : `<div class="empty">Пока нет заявок. Первая запись появится сразу после сохранения формы или через Telegram-бота.</div>`}
+        </div>
+      `;
+    }
+
+    function renderProfileTab(profile, events, catalog, stats) {
+      const providers = catalog.providers || [];
+      const selected = profile.selectedProviderId || "";
+      return `
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <h2>Профиль</h2>
+              <p>Параметры Telegram-пользователя, рабочая конфигурация и последние действия.</p>
+            </div>
+            <span class="pill"><strong>${escapeHtml(profile.selectedProviderLabel || "не выбран")}</strong></span>
+          </div>
+          <div class="cards cols-2">
+            <article class="card">
+              <div class="row">
+                <div>
+                  <h3>${escapeHtml(profile.displayName || "Пользователь")}</h3>
+                  <div class="sub">${escapeHtml(profile.username ? `@${profile.username}` : `Telegram ID ${state.userId}`)}</div>
+                </div>
+                <span class="pill"><strong>ID</strong> ${escapeHtml(state.userId)}</span>
+              </div>
+              <div class="chip-row">
+                ${profile.company ? `<span class="chip"><strong>Компания</strong> ${escapeHtml(profile.company)}</span>` : ""}
+                ${profile.role ? `<span class="chip"><strong>Роль</strong> ${escapeHtml(profile.role)}</span>` : ""}
+                <span class="chip"><strong>Заявок</strong> ${escapeHtml(fmtNumber.format(stats.requestsCount || 0))}</span>
+              </div>
+              <p>${escapeHtml(profile.about || "Профиль пока не заполнен.")}</p>
+            </article>
+
+            <form class="card fields" id="profileForm">
+              <div class="field">
+                <label>Компания</label>
+                <input name="company" value="${escapeHtml(profile.company || "")}" placeholder="Название компании">
+              </div>
+              <div class="field">
+                <label>Роль</label>
+                <input name="role" value="${escapeHtml(profile.role || "")}" placeholder="Роль или должность">
+              </div>
+              <div class="field">
+                <label>О себе / контекст</label>
+                <textarea name="about" placeholder="Кратко о проекте, задачах и ограничениях">${escapeHtml(profile.about || "")}</textarea>
+              </div>
+              <div class="field">
+                <label>Основная модель</label>
+                <select name="selectedProviderId">
+                  <option value="">Не выбрана</option>
+                  ${providers.map((provider) => `
+                    <option value="${escapeHtml(provider.id)}" ${selected === provider.id ? "selected" : ""}>
+                      ${escapeHtml(provider.title)}
+                    </option>
+                  `).join("")}
+                </select>
+              </div>
+              <div class="form-actions">
+                <button class="button primary" type="submit">Сохранить профиль</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <h2>Последние действия</h2>
+              <p>История открытий, изменений и заявок.</p>
+            </div>
+          </div>
+          ${events.length ? `
+            <div class="events">
+              ${events.slice(0, 8).map((item) => `
+                <article class="event">
+                  <div class="head">
+                    <strong>${escapeHtml(item.type)}</strong>
+                    <small>${escapeHtml(fmtDate.format(new Date(item.createdAt)))}</small>
+                  </div>
+                  <small>${escapeHtml(item.value || "")}</small>
+                </article>
+              `).join("")}
+            </div>
+          ` : `<div class="empty">Пока нет событий.</div>`}
+        </div>
+      `;
+    }
+
+    function attachTabActions() {
+      const modelButtons = document.querySelectorAll("[data-select-model]");
+      modelButtons.forEach((button) => {
+        button.addEventListener("click", () => selectModel(button.dataset.selectModel));
+      });
+
+      const requestForm = document.getElementById("requestForm");
+      if (requestForm) {
+        requestForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const submit = requestForm.querySelector('button[type="submit"]');
+          submit.disabled = true;
+          try {
+            await saveRequest(requestForm);
+          } finally {
+            submit.disabled = false;
+          }
+        });
+      }
+
+      const profileForm = document.getElementById("profileForm");
+      if (profileForm) {
+        profileForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const submit = profileForm.querySelector('button[type="submit"]');
+          submit.disabled = true;
+          try {
+            await saveProfile(profileForm);
+          } finally {
+            submit.disabled = false;
+          }
+        });
+      }
+    }
+
+    await loadBootstrap();
+    renderShell();
+  </script>
+</body>
+</html>
